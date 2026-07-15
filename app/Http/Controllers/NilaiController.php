@@ -4,28 +4,39 @@ namespace App\Http\Controllers;
 use App\Models\Nilai;
 use App\Models\MahasiswaProfile;
 use Illuminate\Http\Request;
-use App\Models\NilaiDetail;
+use Illuminate\Support\Facades\DB;
 
 class NilaiController extends Controller
 {
     // Ambil semua nilai berdasarkan mata kuliah
 public function nilaiSaya(Request $request)
-{
-    $user = $request->user();
+    {
+        $mahasiswa = $request->user()->mahasiswaProfile;
 
-    $mahasiswa = $user->mahasiswaProfile;
+        if (!$mahasiswa) {
+            return response()->json([
+                'message' => 'Data mahasiswa tidak ditemukan'
+            ], 404);
+        }
 
-    if (!$mahasiswa) {
-        return response()->json([
-            'message' => 'Data mahasiswa tidak ditemukan'
-        ], 404);
+        $nilai = DB::table('nilai_detail as nd')
+            ->join('mata_kuliah as mk', 'nd.mata_kuliah_id', '=', 'mk.id')
+            ->where('nd.mahasiswa_id', $mahasiswa->id)
+            ->select('mk.id as mata_kuliah_id', 'mk.name as mata_kuliah', 'nd.nilai_key', 'nd.nilai')
+            ->get()
+            ->groupBy('mata_kuliah_id')
+            ->map(function ($rows) {
+                $first = $rows->first();
+                return [
+                    'mata_kuliah_id' => $first->mata_kuliah_id,
+                    'mata_kuliah'    => $first->mata_kuliah,
+                    'nilai'          => $rows->pluck('nilai', 'nilai_key'),
+                ];
+            })
+            ->values();
+
+        return response()->json($nilai);
     }
-
-    $nilai = Nilai::where('mahasiswa_id', $mahasiswa->id)
-        ->get();
-
-    return response()->json($nilai);
-}
     
     public function index(string $mkId)
     {
@@ -74,19 +85,8 @@ public function nilaiSaya(Request $request)
     }
 
     // Nilai mahasiswa yg sedang login
-    public function milikSaya(Request $request)
+public function milikSaya(Request $request)
     {
-        $mahasiswa = $request->user()->mahasiswaProfile;
-
-        $nilai = Nilai::where('mahasiswa_id', $mahasiswa->id)
-            ->get()
-            ->map(fn($n) => [
-                'mata_kuliah' => $n->mata_kuliah,
-                'nilai_angka' => $n->nilai_angka,
-                'nilai_huruf' => $n->nilai_huruf,
-                'semester'    => $n->semester,
-            ]);
-
-        return response()->json($nilai);
+        return $this->nilaiSaya($request);
     }
 }
