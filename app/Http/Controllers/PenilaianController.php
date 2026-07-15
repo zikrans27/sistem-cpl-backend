@@ -35,63 +35,63 @@ class PenilaianController extends Controller
     }
 
     // Simpan nilai mahasiswa
-    public function simpanNilai(Request $request, $mkId)
-    {
-        $request->validate([
-            'mahasiswa' => 'required|array',
-        ]);
+// Simpan nilai mahasiswa
+public function simpanNilai(Request $request, $mkId)
+{
+    $request->validate([
+        'mahasiswa' => 'required|array',
+    ]);
 
-        foreach ($request->mahasiswa as $mhs) {
-            if (empty($mhs['nim'])) continue;
+    foreach ($request->mahasiswa as $mhs) {
+        if (empty($mhs['nim'])) continue;
 
-            $mahasiswa = MahasiswaProfile::where('nim', $mhs['nim'])->first();
-            if (!$mahasiswa) continue;
+        $mahasiswa = MahasiswaProfile::where('nim', $mhs['nim'])->first();
+        if (!$mahasiswa) continue;
 
-            foreach ($mhs['nilai'] as $key => $angka) {
-                if ($angka === '' || $angka === null) continue;
+        foreach ($mhs['nilai'] as $key => $angka) {
+            if ($angka === '' || $angka === null) continue;
 
-                DB::table('nilai_detail')->updateOrInsert(
-                    [
-                        'mata_kuliah_id' => $mkId,
-                        'mahasiswa_id'   => $mahasiswa->id,
-                        'nilai_key'      => $key,
-                    ],
-                    [
-                        'admin_id'    => auth()->id(),
-                        'nilai_angka' => $angka,
-                        'created_at'  => now(),
-                        'updated_at'  => now(),
-                    ]
-                );
-            }
+            DB::table('nilai_detail')->updateOrInsert(
+                [
+                    'mata_kuliah_id' => $mkId,
+                    'mahasiswa_id'   => $mahasiswa->id,
+                    'nilai_key'      => $key,
+                ],
+                [
+                    'nilai'      => $angka,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]
+            );
         }
-
-        return response()->json(['message' => 'Nilai tersimpan']);
     }
 
-    // Ambil semua nilai per mata kuliah
-    public function getNilai($mkId)
-    {
-        $nilaiList = DB::table('nilai_detail as nd')
-            ->join('mahasiswa_profiles as mp', 'nd.mahasiswa_id', '=', 'mp.id')
-            ->join('users as u', 'mp.user_id', '=', 'u.id')
-            ->where('nd.mata_kuliah_id', $mkId)
-            ->select('u.name as nama', 'mp.nim', 'nd.nilai_key', 'nd.nilai_angka')
-            ->get();
+    return response()->json(['message' => 'Nilai tersimpan']);
+}
 
-        // Group by NIM
-        $grouped = [];
-        foreach ($nilaiList as $n) {
-            if (!isset($grouped[$n->nim])) {
-                $grouped[$n->nim] = [
-                    'nim'   => $n->nim,
-                    'nama'  => $n->nama,
-                    'nilai' => [],
-                ];
-            }
-            $grouped[$n->nim]['nilai'][$n->nilai_key] = $n->nilai_angka;
+// Ambil semua nilai per mata kuliah
+public function getNilai($mkId)
+{
+    $nilaiList = DB::table('nilai_detail as nd')
+        ->join('mahasiswa_profiles as mp', 'nd.mahasiswa_id', '=', 'mp.id')
+        ->join('users as u', 'mp.user_id', '=', 'u.id')
+        ->where('nd.mata_kuliah_id', $mkId)
+        ->select('u.name as nama', 'mp.nim', 'nd.nilai_key', 'nd.nilai as nilai_angka')
+        ->get();
+
+    // Group by NIM
+    $grouped = [];
+    foreach ($nilaiList as $n) {
+        if (!isset($grouped[$n->nim])) {
+            $grouped[$n->nim] = [
+                'nim'   => $n->nim,
+                'nama'  => $n->nama,
+                'nilai' => [],
+            ];
         }
-
-        return response()->json(array_values($grouped));
+        $grouped[$n->nim]['nilai'][$n->nilai_key] = $n->nilai_angka;
     }
+
+    return response()->json(array_values($grouped));
+}
 }
