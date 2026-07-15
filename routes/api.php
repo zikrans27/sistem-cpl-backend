@@ -34,12 +34,6 @@ Route::post('/mata-kuliah', [MataKuliahController::class, 'store']);
 Route::put('/mata-kuliah/{id}', [MataKuliahController::class, 'update']);
 Route::delete('/mata-kuliah/{id}', [MataKuliahController::class, 'destroy']);
 
-// Nilai
-Route::middleware('auth:sanctum')->group(function () {
-    Route::get('/nilai/{mkId}', [NilaiController::class, 'index']);
-    Route::post('/nilai', [NilaiController::class, 'store']);
-    Route::get('/nilai-saya', [NilaiController::class, 'milikSaya']);
-});
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/penilaian/{mkId}/struktur', [PenilaianController::class, 'getStruktur']);
